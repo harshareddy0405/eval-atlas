@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Eval Atlas is a local-first dashboard for exploring deterministic, simulated AI evaluation runs."
+    />
+    <meta name="theme-color" content="#08131f" />
+    <title>Eval Atlas — Map model behavior</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="quality.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to dashboard</a>
+    <aside class="sidebar" aria-label="Primary navigation">
+      <a href="#" class="brand" aria-label="Eval Atlas home">
+        <svg viewBox="0 0 44 44" aria-hidden="true">
+          <circle cx="22" cy="22" r="18" />
+          <path
+            d="M9 25c8-8 18-12 27-8M12 33c6-7 16-11 23-9M20 5c-3 10-2 23 4 34"
+          />
+          <circle cx="30" cy="16" r="3" />
+        </svg>
+        <span>eval<br /><b>atlas</b></span>
+      </a>
+      <nav class="sidebar-nav">
+        <button
+          class="nav-item active"
+          type="button"
+          data-view="overview"
+          aria-current="page"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" /></svg
+          ><span>Overview</span>
+        </button>
+        <button class="nav-item" type="button" data-view="cases">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 6h13M8 12h13M8 18h13" />
+            <circle cx="3" cy="6" r="1" />
+            <circle cx="3" cy="12" r="1" />
+            <circle cx="3" cy="18" r="1" /></svg
+          ><span>Test cases</span><em id="navCaseCount">12</em>
+        </button>
+        <button class="nav-item" type="button" data-view="compare">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 20V10M12 20V4M19 20v-7" /></svg
+          ><span>Compare</span>
+        </button>
+        <button class="nav-item" type="button" data-view="method">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 21a9 9 0 1 0-9-9 9 9 0 0 0 9 9Z" />
+            <path d="M12 11v5M12 7h.01" /></svg
+          ><span>Method</span>
+        </button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="local-chip"><span></span>LOCAL DEMO</div>
+        <p>Seeded simulation<br />v1.4.0</p>
+      </div>
+    </aside>
+
+    <div class="app-frame">
+      <header class="topbar">
+        <button
+          class="mobile-menu"
+          id="mobileMenuButton"
+          type="button"
+          aria-label="Toggle navigation"
+          aria-expanded="false"
+        >
+          ☰
+        </button>
+        <div class="breadcrumb">
+          <span>ATLAS /</span><b id="breadcrumbLabel">OVERVIEW</b>
+        </div>
+        <div class="run-meta">
+          <span class="pulse"></span>
+          <div>
+            <b id="lastRunLabel">RUN 024</b
+            ><small id="lastRunTime">Ready</small>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="ghost-button" id="exportCsvButton" type="button">
+            Export CSV
+          </button>
+          <button class="add-button" id="addCaseButton" type="button">
+            <span>＋</span> Add test
+          </button>
+          <button class="run-button" id="runEvalButton" type="button">
+            <span class="run-symbol">▶</span
+            ><span><b>Run eval</b><small>simulated</small></span>
+          </button>
+        </div>
+      </header>
+
+      <main id="main">
+        <section
+          class="page active"
+          data-page="overview"
+          id="overviewPage"
+          aria-labelledby="overviewTitle"
+        >
+          <div class="page-heading">
+            <div>
+              <p class="overline">MISSION CONTROL</p>
+              <h1 id="overviewTitle">Behavior, mapped.</h1>
+              <p>
+                A clear view of where your candidate models hold up—and where
+                they drift.
+              </p>
+            </div>
+            <div class="model-selector">
+              <label for="primaryModel">Primary model</label
+              ><select id="primaryModel"></select>
+            </div>
+          </div>
+
+          <section class="score-grid" aria-label="Evaluation summary">
+            <article class="score-card hero-score">
+              <div class="score-card-head">
+                <span>OVERALL SCORE</span><em id="scoreDelta">+2.4</em>
+              </div>
+              <div class="hero-score-value">
+                <strong id="overallScore">86</strong><span>/100</span>
+              </div>
+              <div class="score-track">
+                <i id="overallTrack"></i><b data-marker="pass">PASS 80</b>
+              </div>
+              <p id="scoreCaption">
+                Strongest on safety and instruction following.
+              </p>
+            </article>
+            <article class="score-card">
+              <div class="score-card-head">
+                <span>PASS RATE</span
+                ><svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12l4 4L19 6" />
+                </svg>
+              </div>
+              <div class="small-score">
+                <strong id="passRate">83%</strong
+                ><span id="passFraction">10 / 12 cases</span>
+              </div>
+              <div class="spark-bars" id="passSpark" aria-hidden="true"></div>
+            </article>
+            <article class="score-card">
+              <div class="score-card-head">
+                <span>CONSISTENCY</span
+                ><svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 17l5-5 4 3 7-9" />
+                </svg>
+              </div>
+              <div class="small-score">
+                <strong id="consistency">91%</strong
+                ><span>across 3 seeded runs</span>
+              </div>
+              <div class="mini-line" aria-hidden="true">
+                <svg viewBox="0 0 180 45" preserveAspectRatio="none">
+                  <path
+                    class="area"
+                    d="M0 38L20 29L40 32L60 21L80 24L100 14L120 19L140 8L160 12L180 5V45H0Z"
+                  />
+                  <path
+                    d="M0 38L20 29L40 32L60 21L80 24L100 14L120 19L140 8L160 12L180 5"
+                  />
+                </svg>
+              </div>
+            </article>
+            <article class="score-card">
+              <div class="score-card-head">
+                <span>SIM. LATENCY</span
+                ><svg viewBox="0 0 24 24" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v6l4 2" />
+                </svg>
+              </div>
+              <div class="small-score">
+                <strong id="latency">1.2s</strong><span>illustrative only</span>
+              </div>
+              <div class="latency-scale">
+                <i id="latencyFill"></i><span>0s</span><span>3s</span>
+              </div>
+            </article>
+          </section>
+
+          <section class="overview-grid">
+            <article class="chart-card trend-card">
+              <div class="card-heading">
+                <div>
+                  <p class="overline">RUN HISTORY</p>
+                  <h2>Score trajectory</h2>
+                </div>
+                <div class="legend" id="trendLegend"></div>
+              </div>
+              <div class="canvas-wrap">
+                <canvas
+                  id="trendChart"
+                  role="img"
+                  aria-label="Line chart comparing model scores over eight simulated evaluation runs"
+                ></canvas>
+                <div class="chart-tooltip" id="chartTooltip" hidden></div>
+              </div>
+              <div class="chart-axis-labels">
+                <span>RUN 017</span><span>RUN 020</span><span>RUN 024</span>
+              </div>
+            </article>
+            <article class="chart-card terrain-card">
+              <div class="card-heading">
+                <div>
+                  <p class="overline">CAPABILITY TERRAIN</p>
+                  <h2>Category coverage</h2>
+                </div>
+                <span class="model-tag" id="terrainModelTag">ASTER-7B</span>
+              </div>
+              <div class="radar-wrap">
+                <svg
+                  id="radarChart"
+                  viewBox="0 0 320 250"
+                  role="img"
+                  aria-label="Radar chart of scores across evaluation categories"
+                >
+                  <g class="radar-grid" transform="translate(160 125)">
+                    <polygon points="0,-95 90,-29 56,77 -56,77 -90,-29" />
+                    <polygon points="0,-71 68,-22 42,58 -42,58 -68,-22" />
+                    <polygon points="0,-47 45,-15 28,38 -28,38 -45,-15" />
+                    <polygon points="0,-24 23,-7 14,19 -14,19 -23,-7" />
+                    <path
+                      d="M0-95V95M-90-29L90 29M90-29L-90 29M56 77L-56-77M-56 77L56-77"
+                    />
+                  </g>
+                  <polygon
+                    id="radarArea"
+                    class="radar-area"
+                    points="160,30 250,96 216,202 104,202 70,96"
+                  />
+                  <g class="radar-labels">
+                    <text x="160" y="16" text-anchor="middle">REASONING</text>
+                    <text x="305" y="92" text-anchor="end">SAFETY</text>
+                    <text x="275" y="238" text-anchor="end">FORMAT</text>
+                    <text x="45" y="238">GROUNDING</text>
+                    <text x="15" y="92">INSTRUCTION</text>
+                  </g>
+                </svg>
+                <div class="terrain-summary">
+                  <strong id="terrainHigh">94</strong><span>STRONGEST</span
+                  ><b id="terrainHighLabel">Safety</b
+                  ><strong id="terrainLow">74</strong><span>WATCH</span
+                  ><b id="terrainLowLabel">Grounding</b>
+                </div>
+              </div>
+            </article>
+            <article class="chart-card category-card">
+              <div class="card-heading">
+                <div>
+                  <p class="overline">BREAKDOWN</p>
+                  <h2>Performance by category</h2>
+                </div>
+                <button class="text-link" type="button" data-go="compare">
+                  Full comparison →
+                </button>
+              </div>
+              <div class="category-bars" id="categoryBars"></div>
+            </article>
+            <article class="chart-card signal-card">
+              <div class="signal-top">
+                <span class="signal-icon">⌁</span>
+                <div>
+                  <p class="overline">ATLAS SIGNAL</p>
+                  <h2 id="signalTitle">Grounding is the widest gap.</h2>
+                </div>
+              </div>
+              <p id="signalBody">
+                The leading model is 13 points behind its safety score on
+                evidence-grounded tasks. Add adversarial source-conflict cases
+                before the next real evaluation.
+              </p>
+              <button class="text-link" type="button" data-go="cases">
+                Inspect affected tests →
+              </button>
+            </article>
+          </section>
+
+          <section class="recent-section">
+            <div class="section-heading">
+              <div>
+                <p class="overline">RECENT RESULTS</p>
+                <h2>Latest test cases</h2>
+              </div>
+              <button class="outline-button" type="button" data-go="cases">
+                View all cases
+              </button>
+            </div>
+            <div class="table-shell">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Case</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Difficulty</th>
+                    <th scope="col">Score</th>
+                    <th scope="col">Result</th>
+                    <th scope="col"><span class="sr-only">Open</span></th>
+                  </tr>
+                </thead>
+                <tbody id="recentTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section
+          class="page"
+          data-page="cases"
+          id="casesPage"
+          hidden
+          aria-labelledby="casesTitle"
+        >
+          <div class="page-heading cases-heading">
+            <div>
+              <p class="overline">TEST SUITE</p>
+              <h1 id="casesTitle">Cases in the field.</h1>
+              <p>
+                Filter the suite, inspect scores, and add local scenarios to the
+                next simulation.
+              </p>
+            </div>
+            <div class="suite-stamp">
+              <b id="suiteCount">12</b><span>ACTIVE CASES</span>
+            </div>
+          </div>
+          <div class="filter-bar">
+            <label class="search-field"
+              ><span class="sr-only">Search cases</span
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m16 16 5 5" /></svg
+              ><input
+                id="caseSearch"
+                type="search"
+                placeholder="Search test cases…"
+            /></label>
+            <label
+              ><span class="sr-only">Category</span
+              ><select id="categoryFilter">
+                <option value="all">All categories</option>
+              </select></label
+            >
+            <label
+              ><span class="sr-only">Result</span
+              ><select id="resultFilter">
+                <option value="all">All results</option>
+                <option value="pass">Passing</option>
+                <option value="fail">Failing</option>
+                <option value="watch">Watchlist</option>
+              </select></label
+            >
+            <button class="filter-reset" id="resetFiltersButton" type="button">
+              Reset
+            </button>
+            <span class="filter-count" id="filterCount">12 shown</span>
+          </div>
+          <div class="table-shell cases-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>
+                    <button type="button" data-sort="name">Case ↕</button>
+                  </th>
+                  <th>
+                    <button type="button" data-sort="category">
+                      Category ↕
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" data-sort="difficulty">
+                      Difficulty ↕
+                    </button>
+                  </th>
+                  <th>
+                    <button type="button" data-sort="score">Score ↕</button>
+                  </th>
+                  <th>Result</th>
+                  <th>Last run</th>
+                  <th><span class="sr-only">Open</span></th>
+                </tr>
+              </thead>
+              <tbody id="casesTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section
+          class="page"
+          data-page="compare"
+          id="comparePage"
+          hidden
+          aria-labelledby="compareTitle"
+        >
+          <div class="page-heading">
+            <div>
+              <p class="overline">MODEL PLATE</p>
+              <h1 id="compareTitle">Compare the terrain.</h1>
+              <p>
+                Put up to three fictional demo models on the same deterministic
+                test suite.
+              </p>
+            </div>
+            <div class="compare-note">
+              <span>◉</span>Scores are generated locally for demonstration
+            </div>
+          </div>
+          <div
+            class="model-toggle-row"
+            id="modelToggles"
+            aria-label="Models to compare"
+          ></div>
+          <section class="compare-hero">
+            <div class="compare-table-wrap">
+              <table class="model-table">
+                <thead id="compareHead"></thead>
+                <tbody id="compareBody"></tbody>
+              </table>
+            </div>
+            <article class="winner-card" id="winnerCard"></article>
+          </section>
+          <section class="matrix-section">
+            <div class="section-heading">
+              <div>
+                <p class="overline">CASE MATRIX</p>
+                <h2>Where models diverge</h2>
+              </div>
+              <span class="matrix-key"><i></i> stronger <i></i> weaker</span>
+            </div>
+            <div class="matrix" id="caseMatrix"></div>
+          </section>
+        </section>
+
+        <section
+          class="page"
+          data-page="method"
+          id="methodPage"
+          hidden
+          aria-labelledby="methodTitle"
+        >
+          <div class="page-heading method-heading">
+            <div>
+              <p class="overline">FIELD NOTES</p>
+              <h1 id="methodTitle">What this atlas measures.</h1>
+              <p>
+                An honest demo of evaluation interface design—not a benchmark
+                and not a model runner.
+              </p>
+            </div>
+          </div>
+          <div class="method-grid">
+            <article class="method-lead">
+              <span>THE METHOD</span>
+              <h2>Deterministic enough to inspect. Rich enough to explore.</h2>
+              <p>
+                Each “run” feeds the case ID, model ID, run number, difficulty,
+                and category through a small seeded function. That produces
+                stable illustrative scores, consistency, and latency. Change a
+                case or run again and the seed changes predictably.
+              </p>
+              <div class="method-code">
+                <code
+                  >score = seeded(case + model + run) × profile −
+                  difficulty</code
+                >
+              </div>
+            </article>
+            <article>
+              <span>01 / DATA</span>
+              <h3>Fictional by default</h3>
+              <p>
+                Models, test prompts, and results are demo data. Custom cases
+                remain in localStorage on this device.
+              </p>
+            </article>
+            <article>
+              <span>02 / SCORING</span>
+              <h3>Visible categories</h3>
+              <p>
+                Scores roll up across reasoning, safety, format, grounding, and
+                instruction-following.
+              </p>
+            </article>
+            <article>
+              <span>03 / RUNS</span>
+              <h3>Simulated execution</h3>
+              <p>
+                The run animation recalculates numbers locally. It never sends a
+                prompt or calls an LLM.
+              </p>
+            </article>
+            <article>
+              <span>04 / EXPORT</span>
+              <h3>Portable evidence</h3>
+              <p>
+                Download the current table as CSV for prototyping, analysis, or
+                presentation work.
+              </p>
+            </article>
+          </div>
+          <div class="method-warning">
+            <span>!</span>
+            <div>
+              <b>Do not use these scores to choose a real model.</b>
+              <p>
+                Replace the seeded adapter with a validated evaluation harness,
+                real prompts, human review, and domain-appropriate rubrics.
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="caseModal" hidden>
+      <form
+        class="modal"
+        id="caseForm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="caseModalTitle"
+      >
+        <div class="modal-head">
+          <div>
+            <p class="overline">NEW COORDINATE</p>
+            <h2 id="caseModalTitle">Add a test case</h2>
+          </div>
+          <button id="closeCaseModal" type="button" aria-label="Close">
+            ×
+          </button>
+        </div>
+        <label
+          >Case name<input
+            id="newCaseName"
+            maxlength="70"
+            required
+            placeholder="e.g. Resolve conflicting sources"
+        /></label>
+        <div class="modal-split">
+          <label
+            >Category<select id="newCaseCategory">
+              <option>Reasoning</option>
+              <option>Safety</option>
+              <option>Format</option>
+              <option>Grounding</option>
+              <option>Instruction</option>
+            </select></label
+          ><label
+            >Difficulty<select id="newCaseDifficulty">
+              <option>Easy</option>
+              <option selected>Medium</option>
+              <option>Hard</option>
+            </select></label
+          >
+        </div>
+        <label
+          >Evaluation goal<textarea
+            id="newCaseGoal"
+            rows="4"
+            required
+            placeholder="Describe the behavior this case is meant to check…"
+          ></textarea>
+        </label>
+        <div class="modal-actions">
+          <button class="ghost-button" id="cancelCaseButton" type="button">
+            Cancel</button
+          ><button class="add-button" type="submit">Add to suite</button>
+        </div>
+      </form>
+    </div>
+
+    <aside
+      class="detail-drawer"
+      id="detailDrawer"
+      hidden
+      aria-labelledby="detailTitle"
+    >
+      <button
+        class="drawer-close"
+        id="closeDetailButton"
+        type="button"
+        aria-label="Close case details"
+      >
+        ×
+      </button>
+      <div id="detailContent"></div>
+    </aside>
+    <div class="drawer-scrim" id="drawerScrim" hidden></div>
+    <div class="run-overlay" id="runOverlay" hidden aria-live="polite">
+      <div class="run-dialog">
+        <div class="orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+        <p class="overline">SIMULATED EVALUATION</p>
+        <h2 id="runProgressTitle">Plotting test coordinates…</h2>
+        <div class="run-progress"><i id="runProgressBar"></i></div>
+        <p id="runProgressMeta">0 / 12 cases</p>
+      </div>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="storage.js"></script>
+    <script src="schema.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
